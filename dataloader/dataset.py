@@ -14,7 +14,6 @@ class SentencePieceDataset(Dataset):
       data = pickle.load(f)
     self.x = [torch.tensor(d[0][:max_xlen]) for d in data]
     self.y = [torch.tensor(d[1][:max_ylen]) for d in data]
-    print(sum([len(d) for d in self.x])/len(self.x))
 
   def __getitem__(self, index):
     return self.x[index], self.y[index]
