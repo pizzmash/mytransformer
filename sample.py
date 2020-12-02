@@ -1,8 +1,11 @@
-import sys
-sys.path.append('/nowxx/y.suzuki/Library/lib/python3.7/site-packages')
-import spacy
+from dataloader.dataset import SentencePieceDataset
+from torch.utils.data import DataLoader
 
 
-spacy_ja = spacy.load('ja_core_news_sm')
-spacy_en = spacy.load('en_core_web_sm')
+ds = SentencePieceDataset('../data/sp/article.model',
+                          '../data/sp/summary.model',
+                          '../data/ds/test.pickle',
+                          400, 100)
+dl = DataLoader(ds, batch_size=2, shuffle=True, collate_fn=ds.collate_fn)
+
 
