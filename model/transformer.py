@@ -25,8 +25,8 @@ class PositionalEncoding(nn.Module):
 
 
 class Transformer(nn.Module):
-  def __init__(self, d_model: int = 512, nhead: int = 8, num_encoder_layers: int = 6,
-               num_decoder_layers: int = 6, dim_feedforward: int = 2048, dropout: float = 0.1,
+  def __init__(self, d_model: int = 768, nhead: int = 12, num_encoder_layers: int = 12,
+               num_decoder_layers: int = 12, dim_feedforward: int = 3072, dropout: float = 0.1,
                activation: str = "relu", source_vocab_length: int = 32000, target_vocab_length: int = 32000) -> None:
     super(Transformer, self).__init__()
     self.source_embedding = nn.Embedding(source_vocab_length, d_model)
@@ -38,7 +38,7 @@ class Transformer(nn.Module):
     decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
     decoder_norm = nn.LayerNorm(d_model)
     self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm)
-    self.out = nn.Linear(512, target_vocab_length)
+    self.out = nn.Linear(d_model, target_vocab_length)
     self._reset_parameters()
     self.d_model = d_model
     self.nhead = nhead

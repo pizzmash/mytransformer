@@ -5,26 +5,31 @@ from torch.utils.data import DataLoader
 from torch.nn import functional as F
 
 
-train_ds = SentencePieceDataset('../data/sp/article.model',
-                                '../data/sp/summary.model',
-                                '../data/ds/train.pickle',
-                                400, 100)
-valid_ds = SentencePieceDataset('../data/sp/article.model',
-                                '../data/sp/summary.model',
-                                '../data/ds/valid.pickle',
-                                400, 100)
-train_dl = DataLoader(train_ds,
-                      batch_size=16,
-                      shuffle=True,
-                      collate_fn=train_ds.collate_fn)
-valid_dl = DataLoader(valid_ds,
-                      batch_size=16,
-                      shuffle=False,
-                      collate_fn=train_ds.collate_fn)
+# train_ds = SentencePieceDataset('../data/sp/article.model',
+#                                 '../data/sp/summary.model',
+#                                 '../data/ds/train.pickle',
+#                                 400, 100)
+# valid_ds = SentencePieceDataset('../data/sp/article.model',
+#                                 '../data/sp/summary.model',
+#                                 '../data/ds/valid.pickle',
+#                                 400, 100)
+test_ds = SentencePieceDataset('../data/sp/article.model',
+                               '../data/sp/summary.model',
+                               '../data/ds/test.pickle',
+                               400, 10000)
+
+# train_dl = DataLoader(train_ds,
+#                       batch_size=16,
+#                       shuffle=True,
+#                       collate_fn=train_ds.collate_fn)
+# valid_dl = DataLoader(valid_ds,
+#                       batch_size=16,
+#                       shuffle=False,
+#                       collate_fn=valid_ds.collate_fn)
 
 
-model = Transformer(source_vocab_length=len(train_ds.spx),
-                    target_vocab_length=len(train_ds.spy))
+model = Transformer(source_vocab_length=len(test_ds.spx),
+                    target_vocab_length=len(test_ds.spy))
 
 optim = torch.optim.Adam(model.parameters(), lr=0.0001,
                          betas=(0.9, 0.98), eps=1e-9)
@@ -35,7 +40,7 @@ def greedy_decode_sentence(model, ids):
   model.eval()
   indexed = ids
   sentence = torch.autograd.Variable(torch.LongTensor([indexed])).to(device)
-  tgt = torch.LongTensor([[train_ds.spy['<s>']]]).to(device)
+  tgt = torch.LongTensor([[test_ds.spy['<s>']]]).to(device)
   translated_ids = []
   maxlen = 100
   for i in range(maxlen):
@@ -46,10 +51,11 @@ def greedy_decode_sentence(model, ids):
     pred = model(sentence.transpose(0,1), tgt, tgt_mask=np_mask)
     add_id = int(pred.argmax(dim=2)[-1])
     translated_ids.append(add_id)
-    if add_id == train_ds.spy['</s>']:
+    if add_id == test_ds.spy['</s>']:
       break
     tgt = torch.cat((tgt, torch.LongTensor([[add_id]]).to(device)))
-  return train_ds.spy.DecodeIds(translated_ids)
+  # return test_ds.spy.DecodeIds(translated_ids)
+  return translated_ids
 
 
 def train(train_iter, val_iter, model, optim, num_epochs, use_gpu=True):
@@ -130,46 +136,47 @@ def train(train_iter, val_iter, model, optim, num_epochs, use_gpu=True):
 
   return losses_dict['train'], losses_dict['val']       
 
-  """
-  train_losses = []
-  valid_losses = []
-  for epoch in range(num_epochs):
-    train_loss = 0
-    valid_loss = 0
-    model.train()
-    for i, batch in enumerate(train_iter):
-      src = batch[0].to(device)
-      tgt = batch[1].to(device)
-      tgt_input = tgt[:, :-1]
-      targets = tgt[:, 1:].contiguous().view(-1)
-      src_mask = (src != train_ds.spx['<pad>'])
-      src_mask = src_mask.float().masked_fill(src_mask == 0, float('-inf')).masked_fill(src_mask == 1, float(0.0))
-      src_mask = src_mask.to(device)
-      tgt_mask = (tgt_input != train_ds.spy['<pad>'])
-      tgt_mask = tgt_mask.float().masked_fill(tgt_mask == 0, float('-inf')).masked_fill(tgt_mask == 1, float(0.0))
-      tgt_mask = tgt_mask.to(device)
-      size = tgt_input.size(1)
-      np_mask = torch.triu(torch.ones(size, size)==1).transpose(0,1)
-      np_mask = np_mask.float().masked_fill(np_mask == 0, float('-inf')).masked_fill(np_mask == 1, float(0.0))
-      np_mask = np_mask.to(device)
-      optim.zero_grad()
-      preds = model(src.transpose(0,1), tgt_input.transpose(0,1), tgt_mask=np_mask)
-      preds = preds.transpose(0,1).contiguous().view(-1, preds.size(-1))
-      loss = F.cross_entropy(preds, targets, ignore_index=train_ds.spy['<pad>'], reduction='sum')
-      loss.backward()
-      optim.step()
-      train_loss += loss.item() / 16
 
-      if i % 100 == 0:
-        print('Batch {}/{} | Loss: {:.4f}'.format(i, len(train_iter), loss.item() / 16))
-        print(greedy_decode_sentence(model, valid_ds[0][0].tolist()))
+def split_and_decode(ids):
+  decoded = []
+  while True:
+    if test_ds.spy['<sep>'] not in ids:
+      decoded.append(test_ds.spy.DecodeIds(ids))
+      return decoded
+    else:
+      idx = ids.index(test_ds.spy['<sep>'])
+      decoded.append(test_ds.spy.DecodeIds(ids[:idx]))
+      if len(ids) - 1 == idx:
+        return decoded
+      else:
+        ids = ids[idx+1:]
 
-    print('Epoch {}/{} | Loss: {:.4f}'.format(epoch+1, num_epochs, train_loss/len(train_iter)))
 
-    train_losses.append(train_loss/len(train_iter))
+def save_summary(path, summaries):
+  with open(path, mode="w") as f:
+    f.write('\n'.join(summaries))
 
-  return train_losses, valid_losses
-  """
 
-train_losses, valid_losses = train(train_dl, valid_dl, model, optim, 10)
-      
+def test(model):
+  device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+  model.to(device)
+  model.load_state_dict(torch.load('checkpoint_best_epoch.pt'))
+
+  torch.backends.cudnn.benchmark = True
+
+  reference_dir = "test/reference/"
+  decoded_dir = "test/decoded/"
+
+  for i, (article, summary) in enumerate(zip(test_ds.x, test_ds.y)):
+    reference_summaries = split_and_decode(summary.tolist())
+    save_summary(reference_dir + str(i).zfill(5) + ".txt", reference_summaries)
+    decoded = greedy_decode_sentence(model, article.tolist())
+    decoded_summaries = split_and_decode(decoded)
+    save_summary(decoded_dir + str(i).zfill(5) + ".txt", decoded_summaries)
+    
+    
+
+# train_losses, valid_losses = train(train_dl, valid_dl, model, optim, 10)
+test(model)
+
+
