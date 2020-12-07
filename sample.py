@@ -1,3 +1,5 @@
+from collections import OrderedDict
+from tqdm import tqdm
 from dataloader.dataset import SentencePieceDataset
 from model.transformer import Transformer
 import torch
@@ -5,30 +7,39 @@ from torch.utils.data import DataLoader
 from torch.nn import functional as F
 
 
-# train_ds = SentencePieceDataset('../data/sp/article.model',
-#                                 '../data/sp/summary.model',
-#                                 '../data/ds/train.pickle',
-#                                 400, 100)
-# valid_ds = SentencePieceDataset('../data/sp/article.model',
-#                                 '../data/sp/summary.model',
-#                                 '../data/ds/valid.pickle',
-#                                 400, 100)
+BATCH_SIZE = 16
+MAGNIFICATION = 16
+
+
+train_ds = SentencePieceDataset('../data/sp/article.model',
+                                 '../data/sp/summary.model',
+                                 '../data/ds/train.pickle',
+                                 400, 100)
+valid_ds = SentencePieceDataset('../data/sp/article.model',
+                                 '../data/sp/summary.model',
+                                 '../data/ds/valid.pickle',
+                                 400, 100)
 test_ds = SentencePieceDataset('../data/sp/article.model',
                                '../data/sp/summary.model',
                                '../data/ds/test.pickle',
                                400, 10000)
 
-# train_dl = DataLoader(train_ds,
-#                       batch_size=16,
-#                       shuffle=True,
-#                       collate_fn=train_ds.collate_fn)
-# valid_dl = DataLoader(valid_ds,
-#                       batch_size=16,
-#                       shuffle=False,
-#                       collate_fn=valid_ds.collate_fn)
+train_dl = DataLoader(train_ds,
+                      batch_size=BATCH_SIZE,
+                      shuffle=True,
+                      collate_fn=train_ds.collate_fn)
+valid_dl = DataLoader(valid_ds,
+                      batch_size=BATCH_SIZE,
+                      shuffle=False,
+                      collate_fn=valid_ds.collate_fn)
 
 
-model = Transformer(source_vocab_length=len(test_ds.spx),
+model = Transformer(d_model = 512, # 768
+                    nhead = 8, # 12
+                    num_encoder_layers = 6, # 12
+                    num_decoder_layers = 6, # 12
+                    dim_feedforward = 2048, # 3072
+                    source_vocab_length=len(test_ds.spx),
                     target_vocab_length=len(test_ds.spy))
 
 optim = torch.optim.Adam(model.parameters(), lr=0.0001,
@@ -61,6 +72,8 @@ def greedy_decode_sentence(model, ids):
 def train(train_iter, val_iter, model, optim, num_epochs, use_gpu=True):
   device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
   model.to(device)
+  model.load_state_dict(torch.load('checkpoints/small-batch-16/checkpoint_best_epoch.pt'))
+  optim.load_state_dict(torch.load('checkpoints/small-batch-16/optimizer.pt'))
   torch.backends.cudnn.benchmark = True
 
   dataloaders_dict = {'train': train_iter, 'val': val_iter}
@@ -75,11 +88,13 @@ def train(train_iter, val_iter, model, optim, num_epochs, use_gpu=True):
 
       epoch_loss = 0.0
 
+      # with tqdm(dataloaders_dict[phase]) as pbar:
+        # pbar.set_description("Epoch {}/{} | {:^5}".format(epoch+1, num_epochs, phase))
+      optim.zero_grad()
       for i, batch in enumerate(dataloaders_dict[phase]):
         src = batch[0].to(device)
         tgt = batch[1].to(device)
 
-        optim.zero_grad()
         with torch.set_grad_enabled(phase == 'train'):
           tgt_input = tgt[:, :-1]
           tgt_output = tgt[:, 1:].contiguous().view(-1)
@@ -106,20 +121,24 @@ def train(train_iter, val_iter, model, optim, num_epochs, use_gpu=True):
 
           if phase == 'train':
             loss.backward()
-            optim.step()
+            if (i + 1) % MAGNIFICATION == 0:
+              optim.step()
+              optim.zero_grad()
 
-          batch_loss = loss.item() / 16
+          batch_loss = loss.item() / BATCH_SIZE
           epoch_loss += batch_loss
 
-          if phase == 'train' and i % 10 == 0:
+          if phase == 'train' and i % (MAGNIFICATION * 8) == 0:
             print('Epoch {}/{} | Batch {}/{} | {:^5} | Loss: {:.4f}'.format(epoch+1,
-                                                                            num_epochs,
-                                                                            i+1,
-                                                                            len(dataloaders_dict[phase]),
-                                                                            phase,
-                                                                            batch_loss))
-            if i % 100 == 0:
-              print(greedy_decode_sentence(model, valid_ds[0][0].tolist()))
+                                                                              num_epochs,
+                                                                              i+1,
+                                                                              len(dataloaders_dict[phase]),
+                                                                              phase,
+                                                                              batch_loss))
+            if i % (MAGNIFICATION * 80) == 0:
+              print(valid_ds.spy.DecodeIds(greedy_decode_sentence(model, valid_ds[0][0].tolist())))
+
+           # pbar.set_postfix(OrderedDict(loss='{:.4f}'.format(batch_loss)))
 
       epoch_loss = epoch_loss / len(dataloaders_dict[phase])
       print('Epoch {}/{} | {:^5} | Loss: {:.4f}'.format(epoch+1,
@@ -131,6 +150,7 @@ def train(train_iter, val_iter, model, optim, num_epochs, use_gpu=True):
         if epoch_loss < min(losses_dict['val'], default=1e9):
           print("saving state dict")
           torch.save(model.state_dict(), f"checkpoint_best_epoch.pt")
+          torch.save(optim.state_dict(), "optimizer.pt")
 
       losses_dict[phase].append(epoch_loss)
 
@@ -176,7 +196,9 @@ def test(model):
     
     
 
-# train_losses, valid_losses = train(train_dl, valid_dl, model, optim, 10)
+# train_losses, valid_losses = train(train_dl, valid_dl, model, optim, 5)
+# print(train_losses)
+# print(valid_losses)
 test(model)
 
 
