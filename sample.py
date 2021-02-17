@@ -5,6 +5,7 @@ from model.transformer import Transformer, MyTransformer
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
+import tensorboardX as tbx
 
 
 BATCH_SIZE = 16
@@ -105,6 +106,8 @@ def train(train_iter, val_iter, model, optim, num_epochs, is_mine=False):
   dataloaders_dict = {'train': train_iter, 'val': val_iter}
   losses_dict = {'train': [], 'val': []}
 
+  writer = tbx.SummaryWriter()
+
   for epoch in range(num_epochs):
     for phase in ['train', 'val']:
       if phase == 'train':
@@ -164,6 +167,9 @@ def train(train_iter, val_iter, model, optim, num_epochs, is_mine=False):
           batch_loss = loss.item() / BATCH_SIZE
           epoch_loss += batch_loss
 
+          if phase == 'train':
+            writer.add_scalars('loss', {'train_itr': batch_loss}, epoch * len(dataloaders_dict[phase]) + i)
+
           if phase == 'train' and i % (MAGNIFICATION * 8) == 0:
             print('Epoch {}/{} | Batch {}/{} | {:^5} | Loss: {:.4f}'.format(epoch+1,
                                                                               num_epochs,
@@ -185,6 +191,7 @@ def train(train_iter, val_iter, model, optim, num_epochs, is_mine=False):
                                                         num_epochs,
                                                         phase,
                                                         epoch_loss))
+      writer.add_scalars('loss', {phase: epoch_loss}, int((epoch+0.5)*len(dataloaders_dict['phase'])))
 
       if phase == 'val':
         if epoch_loss < min(losses_dict['val'], default=1e9):
