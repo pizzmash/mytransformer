@@ -24,19 +24,20 @@ test_ds = SentencePieceDataset('../data/sp/article.model',
                                '../data/sp/summary.model',
                                '../data/ds/test.pickle',
                                400, 10000)
-# train_ds = MyDataset('../data/sp/article.model',
-#                      '../data/sp/summary.model',
-#                      '../data/ds/train.pickle',
-#                      400, 100)
-# valid_ds = MyDataset('../data/sp/article.model',
-#                      '../data/sp/summary.model',
-#                      '../data/ds/valid.pickle',
-#                      400, 100)
-# test_ds = MyDataset('../data/sp/article.model',
-#                     '../data/sp/summary.model',
-#                     '../data/ds/test.pickle',
-#                     400, 10000)
-
+"""
+train_ds = MyDataset('../data/sp/article.model',
+                     '../data/sp/summary.model',
+                     '../data/ds/train.pickle',
+                     400, 100)
+valid_ds = MyDataset('../data/sp/article.model',
+                     '../data/sp/summary.model',
+                     '../data/ds/valid.pickle',
+                     400, 100)
+test_ds = MyDataset('../data/sp/article.model',
+                    '../data/sp/summary.model',
+                    '../data/ds/test.pickle',
+                    400, 10000)
+"""
 train_dl = DataLoader(train_ds,
                       batch_size=BATCH_SIZE,
                       shuffle=True,
@@ -49,19 +50,20 @@ valid_dl = DataLoader(valid_ds,
 
 model = Transformer(d_model = 512,#768,
                     nhead = 8,#12,
-                    num_encoder_layers = 8,#12,
-                    num_decoder_layers = 8,#12,
+                    num_encoder_layers = 6,#12,
+                    num_decoder_layers = 6,#12,
                     dim_feedforward = 2048,#3072,
                     source_vocab_length=len(test_ds.spx),
                     target_vocab_length=len(test_ds.spy))
-# model = MyTransformer(d_model = 512, # 768
-#                       nhead = 8, # 12
-#                       num_encoder_layers = 6, # 12
-#                       num_decoder_layers = 6, # 12
-#                       dim_feedforward = 2048, # 3072
-#                       source_vocab_length=len(test_ds.spx),
-#                       target_vocab_length=len(test_ds.spy))
-
+"""
+model = MyTransformer(d_model = 512, # 768
+                      nhead = 8, # 12
+                      num_encoder_layers = 6, # 12
+                      num_decoder_layers = 6, # 12
+                      dim_feedforward = 2048, # 3072
+                      source_vocab_length=len(test_ds.spx),
+                      target_vocab_length=len(test_ds.spy))
+"""
 optim = torch.optim.Adam(model.parameters(), lr=0.0001,
                          betas=(0.9, 0.98), eps=1e-9)
 
@@ -99,14 +101,16 @@ def greedy_decode_sentence(model, ids, importance=None):
 def train(train_iter, val_iter, model, optim, num_epochs, is_mine=False):
   device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
   model.to(device)
-  # model.load_state_dict(torch.load('checkpoints/small-batch-16/checkpoint_best_epoch.pt'))
-  # optim.load_state_dict(torch.load('checkpoints/small-batch-16/optimizer.pt'))
+  # model.load_state_dict(torch.load('checkpoint_best_epoch.pt'))
+  # optim.load_state_dict(torch.load('optimizer.pt'))
   torch.backends.cudnn.benchmark = True
 
   dataloaders_dict = {'train': train_iter, 'val': val_iter}
   losses_dict = {'train': [], 'val': []}
 
   writer = tbx.SummaryWriter()
+
+  print("start")
 
   for epoch in range(num_epochs):
     for phase in ['train', 'val']:
@@ -171,27 +175,31 @@ def train(train_iter, val_iter, model, optim, num_epochs, is_mine=False):
             writer.add_scalars('loss', {'train_itr': batch_loss}, epoch * len(dataloaders_dict[phase]) + i)
 
           if phase == 'train' and i % (MAGNIFICATION * 8) == 0:
+            """
             print('Epoch {}/{} | Batch {}/{} | {:^5} | Loss: {:.4f}'.format(epoch+1,
                                                                               num_epochs,
                                                                               i+1,
                                                                               len(dataloaders_dict[phase]),
                                                                               phase,
                                                                               batch_loss))
-            if i % (MAGNIFICATION * 32) == 0:
+            """
+            if i % (MAGNIFICATION * 128) == 0:
               if not is_mine:
-                print(valid_ds.spy.DecodeIds(greedy_decode_sentence(model, valid_ds[0][0].tolist())))
+                writer.add_text('val[0]', valid_ds.spy.DecodeIds(greedy_decode_sentence(model, valid_ds[0][0].tolist())), epoch*len(dataloaders_dict['train'])+i)
               else:
-                print(valid_ds.spy.DecodeIds(greedy_decode_sentence(model, valid_ds[0][0].tolist(), valid_ds[0][2].tolist())))
+                writer.add_text('val[0]', valid_ds.spy.DecodeIds(greedy_decode_sentence(model, valid_ds[0][0].tolist(), valid_ds[0][2].tolist())), epoch*len(dataloaders_dict['train'])+i)
 
 
            # pbar.set_postfix(OrderedDict(loss='{:.4f}'.format(batch_loss)))
 
       epoch_loss = epoch_loss / len(dataloaders_dict[phase])
+      """
       print('Epoch {}/{} | {:^5} | Loss: {:.4f}'.format(epoch+1,
                                                         num_epochs,
                                                         phase,
                                                         epoch_loss))
-      writer.add_scalars('loss', {phase: epoch_loss}, int((epoch+0.5)*len(dataloaders_dict['phase'])))
+      """
+      writer.add_scalars('loss', {phase: epoch_loss}, int((epoch+0.5)*len(dataloaders_dict['train'])))
 
       if phase == 'val':
         if epoch_loss < min(losses_dict['val'], default=1e9):
@@ -231,7 +239,7 @@ def test(model, is_mine=False):
 
   torch.backends.cudnn.benchmark = True
 
-  reference_dir = "test/reference/"
+  # reference_dir = "test/reference/"
   decoded_dir = "test/decoded/"
 
   if is_mine:
@@ -240,8 +248,8 @@ def test(model, is_mine=False):
     zip_obj = zip(test_ds.x, test_ds.y)
 
   for i, data in enumerate(tqdm(zip_obj)):
-    reference_summaries = split_and_decode(data[1].tolist())
-    save_summary(reference_dir + str(i).zfill(5) + ".txt", reference_summaries)
+    # reference_summaries = split_and_decode(data[1].tolist())
+    # save_summary(reference_dir + str(i).zfill(5) + ".txt", reference_summaries)
     if is_mine:
       decoded = greedy_decode_sentence(model, data[0].tolist(), data[2].tolist())
     else:
@@ -265,10 +273,10 @@ def restore_importance(ds):
     save_summary(importance_dir + str(i).zfill(5) + ".txt", summaries)
     
 
-train_losses, valid_losses = train(train_dl, valid_dl, model, optim, 12, False)
-print(train_losses)
-print(valid_losses)
-# test(model, is_mine=True)
+# train_losses, valid_losses = train(train_dl, valid_dl, model, optim, 18, False)
+# print(train_losses)
+# print(valid_losses)
+test(model, is_mine=False)
 # restore_importance(test_ds)
 
 
