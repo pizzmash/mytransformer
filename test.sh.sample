@@ -1,0 +1,9 @@
+python main.py \
+  --mode test \
+  --method conventional \
+  --enc-sp-model path/to/article-sp.model \
+  --dec-sp-model path/to/summary-sp.model \
+  --test-data path/to/test.pickle \
+  --model-load checkpoints/checkpoint_best_epoch.pt \
+  --decode-dir test/decode
+  

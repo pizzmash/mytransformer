@@ -1,5 +1,2 @@
 __*__
-*.pt
-test/
-checkpoints/
-runs/
+*.sh

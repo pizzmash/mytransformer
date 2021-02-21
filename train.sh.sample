@@ -1,0 +1,14 @@
+python main.py \
+  --mode train \
+  --method conventional \
+  --epochs 20 \
+  --batch-size 64 \
+  --early-stopping \
+  --num-non-updated-counts 3 \
+  --enc-sp-model path/to/article-sp.model \
+  --dec-sp-model path/to/summary-sp.model \
+  --train-data path/to/train.pickle \
+  --valid-data path/to/valid.pickle \
+  --model-save checkpoints/checkpoint_best_epoch.pt \
+  --optim-save checkpoints/optimizer_best_epoch.pt \
+  --log-dir runs \
