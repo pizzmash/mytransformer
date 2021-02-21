@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from tqdm import tqdm
 from dataloader.dataset import SentencePieceDataset, MyDataset
 from model.transformer import Transformer, MyTransformer
