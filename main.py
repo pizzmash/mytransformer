@@ -19,7 +19,7 @@ def load_ds_and_build_dl(args):
             args.max_enc_steps,
             args.max_dec_steps
         )
-        val_ds = SentencePieceDataset(
+        valid_ds = SentencePieceDataset(
             args.enc_sp_model,
             args.dec_sp_model,
             args.valid_data,
@@ -120,7 +120,7 @@ def train(args):
     dec_pad_id = train_ds.spy['<pad>']
     model = build_model(args, len(train_ds.spx), len(train_ds.spy))
     optim = torch.optim.Adam(
-        model._reset_parameters(),
+        model.parameters(),
         lr=0.0001, betas=(0.9, 0.98), eps=1e-9
     )
 
@@ -191,11 +191,11 @@ def train(args):
 
                     if phase == 'train':
                         loss.backward()
-                        if (i + 1) % MAGNIFICATION == 0:
+                        if (i + 1) % args.accumulation == 0:
                             optim.step()
                             optim.zero_grad()
 
-                    batch_loss = loss.item() / BATCH_SIZE
+                    batch_loss = loss.item() / args.batch_size
                     epoch_loss += batch_loss
 
                     if phase == 'train':
@@ -220,7 +220,7 @@ def train(args):
                                     'val[0]',
                                     valid_ds.spy.DecodeIds(
                                         greedy_decode_sentence(
-                                            valid_ds.spy
+                                            valid_ds.spy,
                                             model,
                                             args.max_dec_steps,
                                             valid_ds[0][0].tolist(),
@@ -236,16 +236,18 @@ def train(args):
             if phase == 'val':
                 if epoch_loss < min_epoch_loss:
                     print('saving state dict. [epoch {}]'.format(epoch))
-                    torch.save(model.state_dict(), arg.model_save)
-                    if arg.optim_save is not None:
-                        torch.save(optim.state_dict(), arg.optim_save)
+                    torch.save(model.state_dict(), args.model_save)
+                    if args.optim_save is not None:
+                        torch.save(optim.state_dict(), args.optim_save)
                     min_epoch_loss = epoch_loss
                     non_update_count = 0
                 else:
                     non_update_count += 1
                     if non_update_count >= args.num_non_updated_counts:
                         print('stopped. [epoch {}]'.format(epoch))
+                        writer.flush()
                         return
+        writer.flush()
     print('done.')
     return
 
@@ -336,7 +338,7 @@ def main():
     if '--mode' in sys.argv:
         index = sys.argv.index('--mode')
         # conds[0]: for train and val, conds[1]: for test
-        conds = ['False', 'False']
+        conds = [False, False]
         if len(sys.argv) > index + 1:
             if sys.argv[index + 1] == 'train':
                 conds[0] = True
@@ -355,7 +357,7 @@ def main():
         '--interval-decoding',
         type=int,
         default=1024,
-        'decode interval for development data[0] while training'
+        help='decode interval for development data[0] while training'
     )
     parser.add_argument('--early-stopping', action='store_true')
     parser.add_argument(
@@ -375,7 +377,7 @@ def main():
     parser.add_argument('--dec-sp-model', required=True)
     parser.add_argument('--train-data', required=conds[0])
     parser.add_argument('--valid-data', required=conds[0])
-    parser.add_argument('--test-data', required=cond[1])
+    parser.add_argument('--test-data', required=conds[1])
     parser.add_argument(
         '--model-load',
         required=conds[1] or conds[0] and '--optim-load' in sys.argv,
@@ -408,3 +410,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
