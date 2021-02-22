@@ -42,7 +42,6 @@ class MyDataset(Dataset):
         # 各データの単語対応位置の文の重要度ランク
         ranks_list = [d[2][:max_xlen] for d in data if len(d[0]) > 0]
         # 各データの文の数
-        print(len([1 for ranks in ranks_list if len(ranks) == 0]))
         n_sentences_list = [max(ranks) + 1 for ranks in ranks_list]
         # 各データに対して何番目のランクの文まで重要とするか
         ths = [3 if n_sentences > 3 else n_sentences  for n_sentences in n_sentences_list]
