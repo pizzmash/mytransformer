@@ -12,8 +12,8 @@ class SentencePieceDataset(Dataset):
         self.spy.load(ymodel_path)
         with open(data_path, mode='rb') as f:
             data = pickle.load(f)
-        self.x = [torch.tensor(d[0][:max_xlen]) for d in data]
-        self.y = [torch.tensor(d[1][:max_ylen]) for d in data]
+        self.x = [torch.tensor(d[0][:max_xlen]) for d in data if len(d[0]) > 0]
+        self.y = [torch.tensor(d[1][:max_ylen]) for d in data if len(d[0]) > 0]
 
     def __getitem__(self, index):
         return self.x[index], self.y[index]
@@ -37,14 +37,18 @@ class MyDataset(Dataset):
         self.spy.load(ymodel_path)
         with open(data_path, mode='rb') as f:
             data = pickle.load(f)
-        self.x = [torch.tensor(d[0][:max_xlen]) for d in data]
-        self.y = [torch.tensor(d[1][:max_ylen]) for d in data]
-        # なんか変！
-        # rankss = [d[2][:max_xlen] for d in data]
-        # rank_valuess = [list(set(ranks)) for ranks in rankss]
-        # ths = [3 if len(rank_values) >= 4 else len(rank_values) for rank_values in rank_valuess]
-        # self.z = [torch.tensor([1 if 0 <= rank <= sorted(rank_values)[th] else 0 for rank in ranks]) for ranks, rank_values, th in zip(rankss, rank_valuess, ths)]
-        self.z = [torch.zeros_like(x) for x in self.x]
+        self.x = [torch.tensor(d[0][:max_xlen]) for d in data if len(d[0]) > 0]
+        self.y = [torch.tensor(d[1][:max_ylen]) for d in data if len(d[0]) > 0]
+        # 各データの単語対応位置の文の重要度ランク
+        ranks_list = [d[2][:max_xlen] for d in data if len(d[0]) > 0]
+        # 各データの文の数
+        print(len([1 for ranks in ranks_list if len(ranks) == 0]))
+        n_sentences_list = [max(ranks) + 1 for ranks in ranks_list]
+        # 各データに対して何番目のランクの文まで重要とするか
+        ths = [3 if n_sentences > 3 else n_sentences  for n_sentences in n_sentences_list]
+        # 各データの単語対応位置の文が重要かどうか
+        self.z = [torch.tensor([1 if 0 <= rank <= th else 0 for rank in ranks])
+                  for ranks, n_sentences, th in zip(ranks_list, n_sentences_list, ths)]
 
     def __getitem__(self, index):
         return self.x[index], self.y[index], self.z[index]
