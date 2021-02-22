@@ -335,10 +335,10 @@ def main():
         default='conventional'
     )
     # train, val, testデータとかはmodeによって必要かどうかが変わる
+    # conds[0]: for train and val, conds[1]: for test
+    conds = [False, False]
     if '--mode' in sys.argv:
         index = sys.argv.index('--mode')
-        # conds[0]: for train and val, conds[1]: for test
-        conds = [False, False]
         if len(sys.argv) > index + 1:
             if sys.argv[index + 1] == 'train':
                 conds[0] = True
