@@ -131,7 +131,7 @@ def train(args):
     torch.backends.cudnn.benchmark = True
 
     min_epoch_loss = 1e9
-    non_update_count = 0
+    non_updated_count = 0
 
     writer = tbx.SummaryWriter(args.log_dir)
 
@@ -239,10 +239,11 @@ def train(args):
                     if args.optim_save is not None:
                         torch.save(optim.state_dict(), args.optim_save)
                     min_epoch_loss = epoch_loss
-                    non_update_count = 0
+                    non_updated_count = 0
                 else:
-                    non_update_count += 1
-                    if non_update_count >= args.num_non_updated_counts:
+                    non_updated_count += 1
+                    if (args.early_stopping
+                            and non_updated_count >= args.num_non_updated_counts):
                         print('stopped. [epoch {}]'.format(epoch))
                         writer.flush()
                         return
@@ -409,4 +410,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
