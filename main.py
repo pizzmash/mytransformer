@@ -7,6 +7,7 @@ from torch.nn import functional as F
 import tensorboardX as tbx
 import argparse
 import sys
+import os
 
 
 def load_ds_and_build_dl(args):
@@ -321,7 +322,9 @@ def test(args):
             )
         decoded_summaries = split_and_decode(decoded, test_ds.spy)
         save_summary(
-            args.decode_dir + str(i).zfill(len(str(len(test_ds.x)))) + ".txt",
+            os.path.join(
+                args.decode_dir, str(i).zfill(len(str(len(test_ds.x))))
+            ) + ".txt",
             decoded_summaries
         )
 
