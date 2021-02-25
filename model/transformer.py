@@ -72,8 +72,8 @@ class MyTransformer(nn.Module):
                activation: str = "relu", source_vocab_length: int = 32000, target_vocab_length: int = 32000) -> None:
     super(MyTransformer, self).__init__()
     self.source_embedding = nn.Embedding(source_vocab_length, d_model)
-    self.importance_embedding = nn.Embedding(2, d_model)
     self.pos_encoder = PositionalEncoding(d_model)
+    self.importance_embedding = nn.Embedding(2, d_model)
     encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
     encoder_norm = nn.LayerNorm(d_model)
     self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
@@ -92,8 +92,8 @@ class MyTransformer(nn.Module):
     if src.size(1) != tgt.size(1):
       raise RuntimeError("the batch number of src and tgt must be equal")
     src = self.source_embedding(src)
-    src += self.importance_embedding(importance)
     src = self.pos_encoder(src)
+    src += self.importance_embedding(importance)
     memory = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
     tgt = self.target_embedding(tgt)
     tgt = self.pos_encoder(tgt)
