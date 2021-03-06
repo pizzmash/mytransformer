@@ -71,7 +71,7 @@ pickle-data
 ```
 
 ### src
-入力系列をsentencepieceでEncodeしたID系列．文頭を`<cls>`，文間を`<sep>`，文末を`</s>`とする．
+入力系列をsentencepieceでEncodeしたID系列．文頭を`<cls>`，文間を`<sep>`とする．文末は特に何もつけなくてよい．
 
 ### target
 出力系列をsentencepieceでEncodeしたID系列．文頭を`<s>`，文間を`<sep>`，文末を`</s>`とする．testデータとしてpickleを読み込む際にはtargetは不要．
@@ -79,10 +79,10 @@ pickle-data
 ### importance
 srcの対応するポジションの文が，srcの全て文の中で何番目に重要であるかを整数型で格納する．`<cls>`など特殊トークンに対応する箇所には-1を格納する．例えばsrcが
 ```
-['<cls>', 101, 102, '<sep>', 103, 104, '<sep>', 105, 106, '</s>']
+['<cls>', 101, 102, '<sep>', 103, 104, '<sep>', 105, 106]
 ```
 となっており，2文目，3文目，1文目に重要であるとする場合，importanceは
 ```
-[-1, 2, 2, -1, 0, 0, -1, 1, 1, -1]
+[-1, 2, 2, -1, 0, 0, -1, 1, 1]
 ```
 となるようにする．`--method`が`conventional`の場合importanceは不要．
