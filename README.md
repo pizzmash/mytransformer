@@ -2,6 +2,8 @@
 ## About
 文書要約のタスクにおいて，Transformerを改善することで良い要約を生成できるようにしようとしているやつ．入力トークンのembeddingに，その単語が属する文が文書中において重要であるかを意味するembeddingを加算することで精度向上を図る．
 
+![imp_emb](https://user-images.githubusercontent.com/39112867/110201196-3216f100-7ea5-11eb-980f-78af3ef87e5d.png)
+
 ## Required
 - [PyTorch](https://pytorch.org/)
 - [tensorboardX](https://github.com/lanpa/tensorboardX)
