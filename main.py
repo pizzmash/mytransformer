@@ -127,15 +127,20 @@ def train(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
     if args.model_load is not None:
-        model.load_state_dict(torch.load(args.model_load))
-        optim.load_state_dict(torch.load(args.optim_load))
-
-    if args.tune is not None:
-        for param in model.parameters():
-            param.requires_grad = False
-        imp_emb_layer = list(model.children())[2]
-        for param in imp_emb_layer.parameters():
-            param.requires_grad = True
+        if not args.tune:
+            model.load_state_dict(torch.load(args.model_load))
+            optim.load_state_dict(torch.load(args.optim_load))
+        else:
+            loaded_state_dict = torch.load(args.model_load)
+            new_state_dict = model.state_dict().copy()
+            for key, value in loaded_state_dict.items():
+                new_state_dict[key] = value
+            model.load_state_dict(new_state_dict)
+            for param in model.parameters():
+                param.requires_grad = False
+            imp_emb_layer = list(model.children())[2]
+            for param in imp_emb_layer.parameters():
+                param.requires_grad = True
 
     torch.backends.cudnn.benchmark = True
 
@@ -357,7 +362,7 @@ def main():
                 conds[1] = True
     parser.add_argument(
         '--tune',
-        action='store_ture',
+        action='store_true',
         help='load and tune the trained model'
     )
     parser.add_argument('--epochs', type=int, required=conds[0])
