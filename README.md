@@ -20,6 +20,7 @@ $ python main.py ...
 | -------------------------- | ------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------- |
 | `--mode`                   | 学習かテストか．`train` or `test`                                              |            | ○                                                       |
 | `--method`                 | 普通のtransformerか提案モデルか．`conventional` or `proposed`                  |            | ○                                                       |
+| `--tune`   | 指定した場合，`--method`: `proposed`時に，学習済みの`conventional`モデルを読み込んで重要性を表すembeddingのみfine tuningする  |   |   |
 | `--epochs`                 | 学習エポック数                                                                 |            | ○                                                       |
 | `--start-epoch`            | 開始エポック                                                                   | 0          |                                                          |
 | `--batch-size`             | バッチサイズ                                                                   |            | ○                                                       |
@@ -39,9 +40,9 @@ $ python main.py ...
 | `--train-data`             | 学習データのpickleファイルパス                                                 |            | `--mode`で`train`指定時に必須                            |
 | `--valid-data`             | 検証データのpickleファイルパス                                                 |            | `--mode`で`train`指定時に必須                            |
 | `--test-data`              | テストデータのpickleファイルパス                                               |            | `--mode`で`test`指定時に必須                             |
-| `--model-load`             | 学習済みモデルパラメータを読み込む際のモデルパス                               |            | `--mode`で`test`指定時，または`--optim-load`指定時に必須 |
+| `--model-load`             | 学習済みモデルパラメータを読み込む際のモデルパス                               |            | `--mode`で`test`指定時，`--optim-load`指定時，または`--tune`指定時に必須 |
 | `--model-save`             | モデルパラメータの保存先                                                       |            | `--mode`で`train`指定時に必須                            |
-| `--optim-load`             | オプティマイザを読み込む際のパス                                               |            | `--model-load`指定時に必須                               |
+| `--optim-load`             | オプティマイザを読み込む際のパス                                               |            | `--model-load`指定時に必須．ただし`--tune`指定時は必須ではない                               |
 | `--optim-save`             | オプティマイザの保存先                                                         |            |                                                          |
 | `--log-dir`                | tensorboardのlog出力先                                                         |            | `--mode`で`train`指定時に必須                            |
 | `--decode-dir`             | テストデータのデコード先ディレクトリ                                           |            | `--mode`で`test`指定時に必須                             |

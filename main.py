@@ -129,6 +129,14 @@ def train(args):
     if args.model_load is not None:
         model.load_state_dict(torch.load(args.model_load))
         optim.load_state_dict(torch.load(args.optim_load))
+
+    if args.tune is not None:
+        for param in model.parameters():
+            param.requires_grad = False
+        imp_emb_layer = list(model.children())[2]
+        for param in imp_emb_layer.parameters():
+            param.requires_grad = True
+
     torch.backends.cudnn.benchmark = True
 
     min_epoch_loss = 1e9
@@ -347,6 +355,11 @@ def main():
                 conds[0] = True
             elif sys.argv[index + 1] == 'test':
                 conds[1] = True
+    parser.add_argument(
+        '--tune',
+        action='store_ture',
+        help='load and tune the trained model'
+    )
     parser.add_argument('--epochs', type=int, required=conds[0])
     parser.add_argument('--start-epoch', type=int, default=0)
     parser.add_argument('--batch-size', type=int, required=conds[0])
@@ -393,7 +406,7 @@ def main():
     )
     parser.add_argument(
         '--optim-load',
-        required=conds[0] and '--model-load' in sys.argv,
+        required=conds[0] and '--model-load' in sys.argv and '--tune' not in sys.argv,
         help='the optimizer path that is loaded berfore training'
     )
     parser.add_argument(
