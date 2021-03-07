@@ -86,15 +86,18 @@ class MyTransformer(nn.Module):
     self.d_model = d_model
     self.nhead = nhead
 
-  def forward(self, src: Tensor, importance: Tensor, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None,
+  def forward(self, src: Tensor, importance: Tensor, add_to_dec: Bool, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None,
           memory_mask: Optional[Tensor] = None, src_key_padding_mask: Optional[Tensor] = None,
           tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
     if src.size(1) != tgt.size(1):
       raise RuntimeError("the batch number of src and tgt must be equal")
     src = self.source_embedding(src)
     src = self.pos_encoder(src)
-    src += self.importance_embedding(importance)
+    if not add_to_dec:
+        src += self.importance_embedding(importance)
     memory = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+    if add_to_dec:
+        memory += self.importance_embedding(importance)
     tgt = self.target_embedding(tgt)
     tgt = self.pos_encoder(tgt)
     output = self.decoder(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
