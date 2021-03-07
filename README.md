@@ -20,7 +20,8 @@ $ python main.py ...
 | -------------------------- | ------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------- |
 | `--mode`                   | 学習かテストか．`train` or `test`                                              |            | ○                                                       |
 | `--method`                 | 普通のtransformerか提案モデルか．`conventional` or `proposed`                  |            | ○                                                       |
-| `--tune`   | 指定した場合，`--method`: `proposed`時に，学習済みの`conventional`モデルを読み込んで重要性を表すembeddingのみfine tuningする  |   |   |
+| `--tune`   | 指定した場合，`--method`が`proposed`時に，学習済みの`conventional`モデルを読み込んで重要性を表すembeddingのみfine tuningする  |   |   |
+| `--add-to-dec` | 指定した場合，`--method`が`proposed`時に，重要性を表すembeddingをencoderではなくdecoderに加算する | | |
 | `--epochs`                 | 学習エポック数                                                                 |            | ○                                                       |
 | `--start-epoch`            | 開始エポック                                                                   | 0          |                                                          |
 | `--batch-size`             | バッチサイズ                                                                   |            | ○                                                       |
