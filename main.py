@@ -200,7 +200,7 @@ def train(args):
                             tgt_mask=np_mask
                         )
                     preds = preds.transpose(0,1).contiguous().view(-1, preds.size(-1))
-                    loss = F.cross_entropy(preds, tgt_output, ignore_index=dec_pad_id, reduction='sum')
+                    loss = F.cross_entropy(preds, tgt_output, ignore_index=dec_pad_id, reduction='mean')
 
                     if phase == 'train':
                         loss.backward()
@@ -246,7 +246,9 @@ def train(args):
             epoch_loss = epoch_loss / len(dataloaders_dict[phase])
             writer.add_scalars('epoch_loss', {phase: epoch_loss}, epoch)
 
-            if phase == 'val':
+            if phase == 'train':
+                optim.step()
+            else if phase == 'val':
                 if epoch_loss < min_epoch_loss:
                     print('saving state dict. [epoch {}]'.format(epoch))
                     if not os.path.exists(args.model_save):
