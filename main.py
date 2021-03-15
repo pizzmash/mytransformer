@@ -251,8 +251,8 @@ def train(args):
             elif phase == 'val':
                 if epoch_loss < min_epoch_loss:
                     print('saving state dict. [epoch {}]'.format(epoch))
-                    if not os.path.exists(args.model_save):
-                        os.mkdir(args.model_save)
+                    if not os.path.exists(os.path.dirname(args.model_save)):
+                        os.mkdir(os.path.dirname(args.model_save))
                     torch.save(model.state_dict(), args.model_save)
                     if args.optim_save is not None:
                         torch.save(optim.state_dict(), args.optim_save)
