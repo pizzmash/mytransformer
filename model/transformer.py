@@ -69,7 +69,8 @@ class Transformer(nn.Module):
 class MyTransformer(nn.Module):
   def __init__(self, d_model: int = 768, nhead: int = 12, num_encoder_layers: int = 12,
                num_decoder_layers: int = 12, dim_feedforward: int = 3072, dropout: float = 0.1,
-               activation: str = "relu", source_vocab_length: int = 32000, target_vocab_length: int = 32000) -> None:
+               activation: str = "relu", source_vocab_length: int = 32000, target_vocab_length: int = 32000,
+               add_to_dec: bool = False) -> None:
     super(MyTransformer, self).__init__()
     self.source_embedding = nn.Embedding(source_vocab_length, d_model)
     self.pos_encoder = PositionalEncoding(d_model)
@@ -85,6 +86,7 @@ class MyTransformer(nn.Module):
     self._reset_parameters()
     self.d_model = d_model
     self.nhead = nhead
+    self.add_to_dec = add_to_dec
 
   def forward(self, src: Tensor, importance: Tensor, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None,
           memory_mask: Optional[Tensor] = None, src_key_padding_mask: Optional[Tensor] = None,
@@ -93,8 +95,11 @@ class MyTransformer(nn.Module):
       raise RuntimeError("the batch number of src and tgt must be equal")
     src = self.source_embedding(src)
     src = self.pos_encoder(src)
-    src += self.importance_embedding(importance)
+    if not self.add_to_dec:
+        src += self.importance_embedding(importance)
     memory = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+    if self.add_to_dec:
+        memory += self.importance_embedding(importance)
     tgt = self.target_embedding(tgt)
     tgt = self.pos_encoder(tgt)
     output = self.decoder(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
