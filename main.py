@@ -248,7 +248,7 @@ def train(args):
 
             if phase == 'train':
                 optim.step()
-            else if phase == 'val':
+            elif phase == 'val':
                 if epoch_loss < min_epoch_loss:
                     print('saving state dict. [epoch {}]'.format(epoch))
                     if not os.path.exists(args.model_save):
