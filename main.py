@@ -201,7 +201,7 @@ def train(args):
                             tgt_mask=np_mask
                         )
                     preds = preds.transpose(0,1).contiguous().view(-1, preds.size(-1))
-                    loss = F.cross_entropy(preds, tgt_output, ignore_index=dec_pad_id, reduction='mean')
+                    loss = F.cross_entropy(preds, tgt_output, ignore_index=dec_pad_id, reduction='sum')
 
                     if phase == 'train':
                         loss.backward()
