@@ -1,6 +1,6 @@
 from tqdm import tqdm
 from dataloader.dataset import SentencePieceDataset, MyDataset
-from model.transformer import Transformer, MyTransformer
+from model.transformer import Transformer, MyTransformer, MyTransformer2
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
@@ -179,6 +179,8 @@ def train(args):
                 tgt = batch[1].to(device).long()
                 if args.method == 'proposed':
                     importance = batch[2].to(device).long()
+                elif args.method == 'attention':
+                    importance = batch[2].to(device).float()
 
                 with torch.set_grad_enabled(phase == 'train'):
                     tgt_input = tgt[:, :-1]

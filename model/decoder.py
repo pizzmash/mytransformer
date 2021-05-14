@@ -148,7 +148,7 @@ def importance_mha_forward(
 class ImportanceMHA(nn.MultiheadAttention):
 	def __init__(self, embed_dim, num_heads, num_imp_linear=3):
 		super(ImportanceMHA, self).__init__(embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None)
-		self.imp_linears = [nn.Linear(1, 1) for _ in range(num_imp_linear)]
+		self.imp_linears = [nn.Linear(1, 1).cuda() for _ in range(num_imp_linear)]
 		self._reset_parameters()
 
 	def forward(self, query: Tensor, key: Tensor, value: Tensor, imp: Tensor, key_padding_mask: Optional[Tensor] = None, need_weights: bool = True, attn_mask: Optional[Tensor] = None) -> Tuple[Tensor, Optional[Tensor]]:
@@ -177,7 +177,7 @@ class ImportanceTDL(nn.TransformerDecoderLayer):
 
 	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
 		tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
-		tgt = tgt + self.dropout11(tgt2)
+		tgt = tgt + self.dropout1(tgt2)
 		tgt = self.norm1(tgt)
 		tgt2 = self.multihead_attn(tgt, memory, memory, importance, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
 		tgt = tgt + self.dropout2(tgt2)
@@ -189,7 +189,7 @@ class ImportanceTDL(nn.TransformerDecoderLayer):
 
 
 class ImportanceTD(nn.TransformerDecoder):
-	def forward(self, tgt: Tensor, memory: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
 		output = tgt
 		for mod in self.layers:
 			output = mod(output, memory, importance, tgt_mask=tgt_mask, memory_mask=memory_mask, tgt_key_padding_mask=tgt_key_padding_mask, memory_key_padding_mask=memory_key_padding_mask)

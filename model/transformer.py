@@ -121,7 +121,7 @@ class MyTransformer2(nn.Module):
   def __init__(self, d_model: int = 768, nhead: int = 12, num_encoder_layers: int = 12,
                num_decoder_layers: int = 12, dim_feedforward: int = 3072, dropout: float = 0.1,
                activation: str = "relu", source_vocab_length: int = 32000, target_vocab_length: int = 32000) -> None:
-    super(Transformer, self).__init__()
+    super(MyTransformer2, self).__init__()
     self.source_embedding = nn.Embedding(source_vocab_length, d_model)
     self.pos_encoder = PositionalEncoding(d_model)
     encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
