@@ -34,7 +34,8 @@ def _scaled_dot_product_attention(
 	B, Nt, E = q.shape
 	q = q/ math.sqrt(E)
 	attn = torch.bmm(q, k.transpose(-2, -1))
-	attn = attn * i.view(-1, i.size(-1), 1)
+	# print(attn.size())
+	attn = attn * i.view(B, 1, i.size(-1))
 	if attn_mask is not None:
 		attn += attn_mask
 	attn = F.softmax(attn, dim=-1)
@@ -102,12 +103,27 @@ def importance_mha_forward(
 		warnings.warn("Byte tensor for key_padding_mask in nn.MultiheadAttention is deprecated. Use bool tensor instead.")
 		key_padding_mask = key_padding_mask.to(torch.bool)
 
+
 	#
 	# reshape q, k, v for multihead attention and make em batch first
 	#
+	# print(q.shape)
 	q = q.contiguous().view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1)
+	# print(q.shape)
+	# print(k.shape)
 	k = k.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
 	v = v.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
+	# print(k.shape)
+	# print(importance_weights.shape)
+	importance_weights = importance_weights.contiguous().transpose(0, 1)
+	buf = torch.empty(bsz * num_heads, importance_weights.size(-1))
+	for pos in range(len(buf)):
+		buf[pos] = importance_weights[int(pos / num_heads)]
+	importance_weights = buf.to(importance_weights.dtype).to(importance_weights.device)
+	# for _ in range(head_dim - 1):
+	# 	importance_weights = torch.stack((importance_weights, importance_weights), dim=1)
+	# importance_weights = importance_weights.view(-1, importance_weights.size(-1))
+	# print(importance_weights.shape)
 
 	# update source sequence length after adjustments
 	src_len = k.size(1)
@@ -152,14 +168,14 @@ class ImportanceMHA(nn.MultiheadAttention):
 		self._reset_parameters()
 
 	def forward(self, query: Tensor, key: Tensor, value: Tensor, imp: Tensor, key_padding_mask: Optional[Tensor] = None, need_weights: bool = True, attn_mask: Optional[Tensor] = None) -> Tuple[Tensor, Optional[Tensor]]:
-		iw = imp.contiguous().view(-1, 1)
-		b_size = iw.size(0)
+		iw = imp.contiguous().view(-1, 1).to(torch.float32)
+		bs = imp.size(1)
 		for i, f in enumerate(self.imp_linears):
 			if i < len(self.imp_linears) - 1:
 				iw = F.relu(f(iw))
 			else:
 				iw = f(iw)
-		iw = iw.contiguous().view(b_size, -1, 1)
+		iw = iw.contiguous().view(-1, bs)
 		return importance_mha_forward(
 			query, key, value, iw,
 			self.embed_dim, self.num_heads,
@@ -199,7 +215,9 @@ class ImportanceTD(nn.TransformerDecoder):
 
 
 if __name__ == "__main__":
-	q = torch.randn(2, 5, 10)
-	kv = torch.randn(2, 5, 10)
-	i = torch.randn(2, 5)
-	print(ImportanceMHA(10, 2).forward(q, kv, kv, i, need_weights=False))
+	device = torch.device("cuda:0")
+	model = ImportanceMHA(10, 2).to(device)
+	q = torch.randn(5, 2, 10).to(device)
+	kv = torch.randn(3, 2, 10).to(device)
+	i = torch.randn(3, 2).to(device)
+	model(q, kv, kv, i, need_weights=False)
