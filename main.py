@@ -26,20 +26,23 @@ def load_ds_and_build_dl(args):
             args.max_enc_steps,
             args.max_dec_steps
         )
-    elif args.method == 'proposed':
+    elif args.method == 'proposed' or args.method == 'attention':
+        bin_imp = args.method == 'proposed'
         train_ds = MyDataset(
             args.enc_sp_model,
             args.dec_sp_model,
             args.train_data,
             args.max_enc_steps,
-            args.max_dec_steps
+            args.max_dec_steps,
+            bin_imp
         )
         valid_ds = MyDataset(
             args.enc_sp_model,
             args.dec_sp_model,
             args.valid_data,
             args.max_enc_steps,
-            args.max_dec_steps
+            args.max_dec_steps,
+            bin_imp
         )
     train_dl = DataLoader(
         train_ds,
@@ -70,6 +73,16 @@ def build_model(args, source_vocab_length, target_vocab_length):
     elif args.method == 'proposed':
         model = MyTransformer(
             add_to_dec=args.add_to_dec,
+            d_model=args.d_model,
+            nhead=args.nhead,
+            num_encoder_layers=args.num_encoder_layers,
+            num_decoder_layers=args.num_decoder_layers,
+            dim_feedforward=args.dim_feedforward,
+            source_vocab_length=source_vocab_length,
+            target_vocab_length=target_vocab_length
+        )
+    elif args.method == 'attention':
+        model = MyTransformer2(
             d_model=args.d_model,
             nhead=args.nhead,
             num_encoder_layers=args.num_encoder_layers,
@@ -193,7 +206,7 @@ def train(args):
                             tgt_input.transpose(0, 1),
                             tgt_mask=np_mask
                         )
-                    elif args.method == 'proposed':
+                    elif args.method == 'proposed' or args.method == 'attention':
                         preds = model(
                             src.transpose(0, 1),
                             importance.transpose(0, 1),
@@ -229,7 +242,7 @@ def train(args):
                                     ),
                                     step
                                 )
-                            elif args.method == 'proposed':
+                            elif args.method == 'proposed' or args.method == 'attention':
                                 writer.add_text(
                                     'val[0]',
                                     valid_ds.spy.DecodeIds(
@@ -352,7 +365,7 @@ def main():
     parser.add_argument('--mode', choices=['train', 'test'], required=True)
     parser.add_argument(
         '--method',
-        choices=['conventional', 'proposed'],
+        choices=['conventional', 'proposed', 'attention'],
         default='conventional'
     )
     # train, val, testデータとかはmodeによって必要かどうかが変わる
