@@ -4,7 +4,7 @@ from torch import Tensor
 from typing import Optional
 import math
 
-from decoder import ImportanceTDL, ImportanceTD
+from .decoder import ImportanceTDL, ImportanceTD
 
 
 class PositionalEncoding(nn.Module):
