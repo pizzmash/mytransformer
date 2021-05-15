@@ -29,7 +29,8 @@ def _scaled_dot_product_attention(
 	k: Tensor,
 	v: Tensor,
 	i: Tensor,
-	attn_mask: Optional[Tensor] = None
+	attn_mask: Optional[Tensor] = None,
+	dropout_p: float = 0.0
 ) -> Tuple[Tensor, Tensor]:
 	B, Nt, E = q.shape
 	q = q/ math.sqrt(E)
@@ -39,6 +40,8 @@ def _scaled_dot_product_attention(
 	if attn_mask is not None:
 		attn += attn_mask
 	attn = F.softmax(attn, dim=-1)
+	if dropout_p > 0.0:
+		attn = F.dropout(attn, p=dropout_p)
 	output = torch.bmm(attn, v)
 	return output, attn
 
@@ -52,6 +55,7 @@ def importance_mha_forward(
 	num_heads: int,
 	in_proj_weight: Tensor,
 	in_proj_bias: Optional[Tensor],
+	dropout_p: float,
 	out_proj_weight: Tensor,
 	out_proj_bias: Optional[Tensor],
 	training: bool = True,
@@ -107,23 +111,14 @@ def importance_mha_forward(
 	#
 	# reshape q, k, v for multihead attention and make em batch first
 	#
-	# print(q.shape)
 	q = q.contiguous().view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1)
-	# print(q.shape)
-	# print(k.shape)
 	k = k.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
 	v = v.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
-	# print(k.shape)
-	# print(importance_weights.shape)
 	importance_weights = importance_weights.contiguous().transpose(0, 1)
 	buf = torch.empty(bsz * num_heads, importance_weights.size(-1))
 	for pos in range(len(buf)):
 		buf[pos] = importance_weights[int(pos / num_heads)]
 	importance_weights = buf.to(importance_weights.dtype).to(importance_weights.device)
-	# for _ in range(head_dim - 1):
-	# 	importance_weights = torch.stack((importance_weights, importance_weights), dim=1)
-	# importance_weights = importance_weights.view(-1, importance_weights.size(-1))
-	# print(importance_weights.shape)
 
 	# update source sequence length after adjustments
 	src_len = k.size(1)
@@ -147,10 +142,14 @@ def importance_mha_forward(
 		new_attn_mask.masked_fill_(attn_mask, float("-inf"))
 		attn_mask = new_attn_mask
 
+	# adjust dropout probability
+	if not training:
+		dropout_p = 0.0
+
 	#
 	# (deep breath) calculate attention and out projection
 	#
-	attn_output, attn_output_weights = _scaled_dot_product_attention(q, k, v, importance_weights, attn_mask)
+	attn_output, attn_output_weights = _scaled_dot_product_attention(q, k, v, importance_weights, attn_mask, dropout_p)
 	attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
 	attn_output = F.linear(attn_output, out_proj_weight, out_proj_bias)
 
@@ -162,8 +161,8 @@ def importance_mha_forward(
 		return attn_output, None
 
 class ImportanceMHA(nn.MultiheadAttention):
-	def __init__(self, embed_dim, num_heads, num_imp_linear=3):
-		super(ImportanceMHA, self).__init__(embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None)
+	def __init__(self, embed_dim, num_heads, dropout=0.1, num_imp_linear=3):
+		super(ImportanceMHA, self).__init__(embed_dim, num_heads, dropout=dropout, bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None)
 		self.imp_linears = [nn.Linear(1, 1).cuda() for _ in range(num_imp_linear)]
 		self._reset_parameters()
 
@@ -180,6 +179,7 @@ class ImportanceMHA(nn.MultiheadAttention):
 			query, key, value, iw,
 			self.embed_dim, self.num_heads,
 			self.in_proj_weight, self.in_proj_bias,
+			self.dropout,
 			self.out_proj.weight, self.out_proj.bias,
 			training=self.training,
 			key_padding_mask=key_padding_mask, need_weights=need_weights,
@@ -189,7 +189,7 @@ class ImportanceMHA(nn.MultiheadAttention):
 class ImportanceTDL(nn.TransformerDecoderLayer):
 	def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu"):
 		super(ImportanceTDL, self).__init__(d_model, nhead, dim_feedforward, dropout, activation)
-		self.multihead_attn = ImportanceMHA(d_model, nhead)
+		self.multihead_attn = ImportanceMHA(d_model, nhead, dropout=dropout)
 
 	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
 		tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
@@ -216,7 +216,7 @@ class ImportanceTD(nn.TransformerDecoder):
 
 if __name__ == "__main__":
 	device = torch.device("cuda:0")
-	model = ImportanceMHA(10, 2).to(device)
+	model = ImportanceMHA(10, 2, dropout=0.1).to(device)
 	q = torch.randn(5, 2, 10).to(device)
 	kv = torch.randn(3, 2, 10).to(device)
 	i = torch.randn(3, 2).to(device)
