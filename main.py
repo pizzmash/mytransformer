@@ -320,7 +320,7 @@ def test(args):
             args.max_dec_steps
         )
         zip_obj = zip(test_ds.x, test_ds.y)
-    elif args.method == 'proposed':
+    elif args.method == 'proposed' or args.method == 'attention':
         test_ds = MyDataset(
             args.enc_sp_model,
             args.dec_sp_model,
@@ -346,7 +346,7 @@ def test(args):
                 args.max_dec_steps,
                 data[0].tolist()
             )
-        elif args.method == 'proposed':
+        elif args.method == 'proposed' or args.method == 'attention':
             decoded = greedy_decode_sentence(
                 test_ds.spy,
                 model,
