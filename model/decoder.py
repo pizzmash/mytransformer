@@ -163,7 +163,7 @@ def importance_mha_forward(
 class ImportanceMHA(nn.MultiheadAttention):
 	def __init__(self, embed_dim, num_heads, dropout=0.1, num_imp_linear=3):
 		super(ImportanceMHA, self).__init__(embed_dim, num_heads, dropout=dropout, bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None)
-		self.imp_linears = [nn.Linear(1, 1).cuda() for _ in range(num_imp_linear)]
+		self.imp_linears = nn.ModuleList([nn.Linear(1, 1).cuda() for _ in range(num_imp_linear)])
 		self._reset_parameters()
 
 	def forward(self, query: Tensor, key: Tensor, value: Tensor, imp: Tensor, key_padding_mask: Optional[Tensor] = None, need_weights: bool = True, attn_mask: Optional[Tensor] = None) -> Tuple[Tensor, Optional[Tensor]]:
