@@ -157,8 +157,8 @@ def train(args):
                 for param in imp_emb_layer.parameters():
                     param.requires_grad = True
             elif args.method == 'attention':
-                for n_decoder in len(args.num_decoder_layers):
-                    for n_linear in len(3):
+                for n_decoder in range(args.num_decoder_layers):
+                    for n_linear in range(3):
                         model.state_dict()['decoder.layers.{}.multihead_attn.imp_linears.{}.weight'.format(n_decoder, n_linear)].requires_grad = True
                         model.state_dict()['decoder.layers.{}.multihead_attn.imp_linears.{}.bias'.format(n_decoder, n_linear)].requires_grad = True
                     
