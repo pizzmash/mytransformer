@@ -150,9 +150,9 @@ def train(args):
             for key, value in loaded_state_dict.items():
                 new_state_dict[key] = value
             model.load_state_dict(new_state_dict)
-            for param in model.parameters():
-                param.requires_grad = False
             if args.method == 'proposed':
+                for param in model.parameters():
+                    param.requires_grad = False
                 imp_emb_layer = list(model.children())[2]
                 for param in imp_emb_layer.parameters():
                     param.requires_grad = True
