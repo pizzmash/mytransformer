@@ -19,8 +19,8 @@ $ python main.py ...
 | オプション名               | 説明                                                                           | デフォルト | 必須？                                                   |
 | -------------------------- | ------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------- |
 | `--mode`                   | 学習かテストか．`train` or `test`                                              |            | ○                                                       |
-| `--method`                 | 普通のtransformerか提案モデルか．`conventional` or `proposed`                  |            | ○                                                       |
-| `--tune`   | 指定した場合，`--method`が`proposed`時に，学習済みの`conventional`モデルを読み込んで重要性を表すembeddingのみfine tuningする  |   |   |
+| `--method`                 | 普通のtransformerか提案モデルか．`conventional` or `proposed` or `attention`                   |            | ○                                                       |
+| `--tune`   | 指定した場合，`--method`が`proposed` or `attention`時に，学習済みの`conventional`モデルを読み込んで追加された機構のみfine tuningする  |   |   |
 | `--add-to-dec` | 指定した場合，`--method`が`proposed`時に，重要性を表すembeddingをencoderではなくdecoderに加算する | | |
 | `--epochs`                 | 学習エポック数                                                                 |            | ○                                                       |
 | `--start-epoch`            | 開始エポック                                                                   | 0          |                                                          |
