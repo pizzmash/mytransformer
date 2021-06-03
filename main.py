@@ -152,9 +152,16 @@ def train(args):
             model.load_state_dict(new_state_dict)
             for param in model.parameters():
                 param.requires_grad = False
-            imp_emb_layer = list(model.children())[2]
-            for param in imp_emb_layer.parameters():
-                param.requires_grad = True
+            if args.method == 'proposed':
+                imp_emb_layer = list(model.children())[2]
+                for param in imp_emb_layer.parameters():
+                    param.requires_grad = True
+            elif args.method == 'attention':
+                for n_decoder in len(args.num_decoder_layers):
+                    for n_linear in len(3):
+                        model.state_dict()['decoder.layers.{}.multihead_attn.imp_linears.{}.weight'.format(n_decoder, n_linear)].requires_grad = True
+                        model.state_dict()['decoder.layers.{}.multihead_attn.imp_linears.{}.bias'.format(n_decoder, n_linear)].requires_grad = True
+                    
 
     torch.backends.cudnn.benchmark = True
 
