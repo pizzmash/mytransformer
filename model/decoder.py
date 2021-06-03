@@ -169,11 +169,16 @@ class ImportanceMHA(nn.MultiheadAttention):
 	def forward(self, query: Tensor, key: Tensor, value: Tensor, imp: Tensor, key_padding_mask: Optional[Tensor] = None, need_weights: bool = True, attn_mask: Optional[Tensor] = None) -> Tuple[Tensor, Optional[Tensor]]:
 		iw = imp.contiguous().view(-1, 1).to(torch.float32)
 		bs = imp.size(1)
-		for i, f in enumerate(self.imp_linears):
-			if i < len(self.imp_linears) - 1:
-				iw = F.relu(f(iw))
-			else:
-				iw = f(iw)
+		###
+		iw = F.relu(iw)
+		iw = iw / torch.max(iw) * -1. + 1.
+		###
+		# for i, f in enumerate(self.imp_linears):
+		#	if i < len(self.imp_linears) - 1:
+		#		iw = F.relu(f(iw))
+		#	else:
+		#		iw = f(iw)
+		###
 		iw = iw.contiguous().view(-1, bs)
 		return importance_mha_forward(
 			query, key, value, iw,
