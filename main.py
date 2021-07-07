@@ -73,6 +73,7 @@ def build_model(args, source_vocab_length, target_vocab_length):
     elif args.method == 'proposed':
         model = MyTransformer(
             add_to_dec=args.add_to_dec,
+            yamamoto=args.yamamoto,
             d_model=args.d_model,
             nhead=args.nhead,
             num_encoder_layers=args.num_encoder_layers,
@@ -389,6 +390,11 @@ def main():
         '--add-to-dec',
         action='store_true',
         help='add importance embedding to decoder\'s memory'
+    )
+    parser.add_argument(
+        '--yamamoto',
+        action='store_true',
+        help='yamamoto option'
     )
     parser.add_argument('--epochs', type=int, required=conds[0])
     parser.add_argument('--start-epoch', type=int, default=0)
