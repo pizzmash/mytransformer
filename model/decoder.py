@@ -196,27 +196,33 @@ class ImportanceTDL(nn.TransformerDecoderLayer):
 		super(ImportanceTDL, self).__init__(d_model, nhead, dim_feedforward, dropout, activation)
 		self.multihead_attn = ImportanceMHA(d_model, nhead, dropout=dropout)
 
-	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None, need_weights: bool = False) -> Tensor:
 		tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
 		tgt = tgt + self.dropout1(tgt2)
 		tgt = self.norm1(tgt)
-		tgt2 = self.multihead_attn(tgt, memory, memory, importance, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+		tgt2, weights = self.multihead_attn(tgt, memory, memory, importance, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)
 		tgt = tgt + self.dropout2(tgt2)
 		tgt = self.norm2(tgt)
 		tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
 		tgt = tgt + self.dropout3(tgt2)
 		tgt = self.norm3(tgt)
-		return tgt
+		if need_weights:
+			return tgt, weights
+		else:
+			return tgt
 
 
 class ImportanceTD(nn.TransformerDecoder):
-	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+	def forward(self, tgt: Tensor, memory: Tensor, importance: Tensor, tgt_mask: Optional[Tensor] = None, memory_mask: Optional[Tensor] = None, tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None, need_weights: bool = False) -> Tensor:
 		output = tgt
 		for mod in self.layers:
-			output = mod(output, memory, importance, tgt_mask=tgt_mask, memory_mask=memory_mask, tgt_key_padding_mask=tgt_key_padding_mask, memory_key_padding_mask=memory_key_padding_mask)
+			output, weights = mod(output, memory, importance, tgt_mask=tgt_mask, memory_mask=memory_mask, tgt_key_padding_mask=tgt_key_padding_mask, memory_key_padding_mask=memory_key_padding_mask, need_weights=True)
 		if self.norm is not None:
 			output = self.norm(output)
-		return output
+		if need_weights:
+			return output, weights
+		else:
+			return output
 
 
 if __name__ == "__main__":

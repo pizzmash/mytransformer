@@ -138,7 +138,7 @@ class MyTransformer2(nn.Module):
 
   def forward(self, src: Tensor, importance: Tensor, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None,
           memory_mask: Optional[Tensor] = None, src_key_padding_mask: Optional[Tensor] = None,
-          tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+          tgt_key_padding_mask: Optional[Tensor] = None, memory_key_padding_mask: Optional[Tensor] = None, need_weights: bool = False) -> Tensor:
     if src.size(1) != tgt.size(1):
       raise RuntimeError("the batch number of src and tgt must be equal")
     src = self.source_embedding(src)
@@ -146,12 +146,23 @@ class MyTransformer2(nn.Module):
     memory = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
     tgt = self.target_embedding(tgt)
     tgt = self.pos_encoder(tgt)
-    output = self.decoder(tgt, memory, importance,
-                          tgt_mask=tgt_mask, memory_mask=memory_mask,
-                          tgt_key_padding_mask=tgt_key_padding_mask,
-                          memory_key_padding_mask=memory_key_padding_mask)
+    if need_weights:
+      output, weights = self.decoder(tgt, memory, importance,
+                            tgt_mask=tgt_mask, memory_mask=memory_mask,
+                            tgt_key_padding_mask=tgt_key_padding_mask,
+                            memory_key_padding_mask=memory_key_padding_mask
+                            need_weights=need_weights)
+
+    else:
+      output = self.decoder(tgt, memory, importance,
+                            tgt_mask=tgt_mask, memory_mask=memory_mask,
+                            tgt_key_padding_mask=tgt_key_padding_mask,
+                            memory_key_padding_mask=memory_key_padding_mask)
     output = self.out(output)
-    return output
+    if need_weights:
+      return output, weights
+    else:
+      return output
 
   def _reset_parameters(self):
     r"""Initiate parameters in the transformer model."""
