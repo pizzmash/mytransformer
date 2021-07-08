@@ -8,6 +8,7 @@ import tensorboardX as tbx
 import argparse
 import sys
 import os
+import pickle
 
 
 def load_ds_and_build_dl(args):
@@ -94,7 +95,7 @@ def build_model(args, source_vocab_length, target_vocab_length):
     return model
 
 
-def greedy_decode_sentence(sp, model, maxlen, ids, importance=None):
+def greedy_decode_sentence(sp, model, maxlen, ids, importance=None, need_weights=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.eval()
     indexed = ids
@@ -115,17 +116,28 @@ def greedy_decode_sentence(sp, model, maxlen, ids, importance=None):
         if not importance:
             pred = model(sentence.transpose(0, 1), tgt, tgt_mask=np_mask)
         else:
-            pred = model(
-                sentence.transpose(0, 1),
-                isentence.transpose(0, 1),
-                tgt, tgt_mask=np_mask
-            )
+            if need_weights:
+                pred, weights = model(
+                    sentence.transpose(0, 1),
+                    isentence.transpose(0, 1),
+                    tgt, tgt_mask=np_mask,
+                    need_weights=need_weights
+                )
+            else:
+                pred = model(
+                    sentence.transpose(0, 1),
+                    isentence.transpose(0, 1),
+                    tgt, tgt_mask=np_mask
+                )
         add_id = int(pred.argmax(dim=2)[-1])
         translated_ids.append(add_id)
         if add_id == sp['</s>']:
             break
         tgt = torch.cat((tgt, torch.LongTensor([[add_id]]).to(device)))
-    return translated_ids
+    if need_weights:
+        return translated_ids, weights[0]
+    else:
+        return translated_ids
 
 
 def train(args):
@@ -309,6 +321,15 @@ def split_and_decode(ids, sp):
                 ids = ids[idx+1:]
 
 
+def mk_weights_set(spx, spy, article, reference, decoded, weights, importance):
+    art_words = [spx.IdToPiece(idx) for idx in article]
+    ref = spy.DecodeIds(reference)
+    dcd_words = [spy.IdToPiece(idx) for idx in decoded]
+    dcd = split_and_decode(decoded, spy)
+    weights_set = (art_words, ref, dcd_words, dcd, weights, importance)
+    return weights_set
+
+
 def save_summary(path, summaries):
     with open(path, mode="w") as f:
         f.write('\n'.join(summaries))
@@ -354,19 +375,33 @@ def test(args):
                 data[0].tolist()
             )
         elif args.method == 'proposed' or args.method == 'attention':
-            decoded = greedy_decode_sentence(
-                test_ds.spy,
-                model,
-                args.max_dec_steps,
-                data[0].tolist(), data[2].tolist()
+            if args.need_weights:
+                decoded, weights = greedy_decode_sentence(
+                    test_ds.spy,
+                    model,
+                    args.max_dec_steps,
+                    data[0].tolist(), data[2].tolist(),
+                    need_weights=args.need_weights
+                )
+            else:
+                decoded = greedy_decode_sentence(
+                    test_ds.spy,
+                    model,
+                    args.max_dec_steps,
+                    data[0].tolist(), data[2].tolist()
+                )
+        if args.need_weights:
+            weights_set = mk_weights_set(test_ds.spx, test_ds.spy, data[0].tolist(), data[1].tolist(), decoded, weights.tolist(), data[2].tolist())
+            with open(os.path.join(args.decode_dir, str(i).zfill(len(str(len(test_ds.x)))))+".pickle", mode="wb") as f:
+                pickle.dump(weights_set, f)
+        else:
+            decoded_summaries = split_and_decode(decoded, test_ds.spy)
+            save_summary(
+                os.path.join(
+                    args.decode_dir, str(i).zfill(len(str(len(test_ds.x))))
+                ) + ".txt",
+                decoded_summaries
             )
-        decoded_summaries = split_and_decode(decoded, test_ds.spy)
-        save_summary(
-            os.path.join(
-                args.decode_dir, str(i).zfill(len(str(len(test_ds.x))))
-            ) + ".txt",
-            decoded_summaries
-        )
 
 
 def main():
@@ -452,6 +487,7 @@ def main():
     )
     parser.add_argument('--log-dir', required=conds[0])
     parser.add_argument('--decode-dir', required=conds[1])
+    parser.add_argument('--need-weights', action='store_true')
 
     args = parser.parse_args()
 

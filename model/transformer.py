@@ -150,7 +150,7 @@ class MyTransformer2(nn.Module):
       output, weights = self.decoder(tgt, memory, importance,
                             tgt_mask=tgt_mask, memory_mask=memory_mask,
                             tgt_key_padding_mask=tgt_key_padding_mask,
-                            memory_key_padding_mask=memory_key_padding_mask
+                            memory_key_padding_mask=memory_key_padding_mask,
                             need_weights=need_weights)
 
     else:
