@@ -323,10 +323,11 @@ def split_and_decode(ids, sp):
 
 def mk_weights_set(spx, spy, article, reference, decoded, weights, importance):
     art_words = [spx.IdToPiece(idx) for idx in article]
-    ref = spy.DecodeIds(reference)
+    art = [spx.DecodeIds(article)]
+    ref = split_and_decode(reference, spy)
     dcd_words = [spy.IdToPiece(idx) for idx in decoded]
     dcd = split_and_decode(decoded, spy)
-    weights_set = (art_words, ref, dcd_words, dcd, weights, importance)
+    weights_set = (art_words, art, ref, dcd_words, dcd, weights, importance)
     return weights_set
 
 
@@ -349,12 +350,14 @@ def test(args):
         )
         zip_obj = zip(test_ds.x, test_ds.y)
     elif args.method == 'proposed' or args.method == 'attention':
+        bin_imp = args.method == 'proposed'
         test_ds = MyDataset(
             args.enc_sp_model,
             args.dec_sp_model,
             args.test_data,
             args.max_enc_steps,
-            args.max_dec_steps
+            args.max_dec_steps,
+            bin_imp
         )
         zip_obj = zip(test_ds.x, test_ds.y, test_ds.z)
 
