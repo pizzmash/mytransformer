@@ -397,14 +397,14 @@ def test(args):
             weights_set = mk_weights_set(test_ds.spx, test_ds.spy, data[0].tolist(), data[1].tolist(), decoded, weights.tolist(), data[2].tolist())
             with open(os.path.join(args.decode_dir, str(i).zfill(len(str(len(test_ds.x)))))+".pickle", mode="wb") as f:
                 pickle.dump(weights_set, f)
-        else:
-            decoded_summaries = split_and_decode(decoded, test_ds.spy)
-            save_summary(
-                os.path.join(
-                    args.decode_dir, str(i).zfill(len(str(len(test_ds.x))))
-                ) + ".txt",
-                decoded_summaries
-            )
+        
+        decoded_summaries = split_and_decode(decoded, test_ds.spy)
+        save_summary(
+            os.path.join(
+                args.decode_dir, str(i).zfill(len(str(len(test_ds.x))))
+            ) + ".txt",
+            decoded_summaries
+        ) 
 
 
 def main():
