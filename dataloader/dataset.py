@@ -3,6 +3,7 @@ import sentencepiece as spm
 import torch
 from torch.utils.data import Dataset
 from torch.nn.utils import rnn
+import numpy as np
 
 class SentencePieceDataset(Dataset):
     def __init__(self, xmodel_path, ymodel_path, data_path, max_xlen, max_ylen):
@@ -53,7 +54,9 @@ class MyDataset(Dataset):
           self.z = [torch.tensor(d[2][:max_xlen]) for d in data if len(d[0]) > 0]
           # 文間の-1を次の文の値にする
           for i in range(len(self.z)):
-            self.z[i][np.where(self.z[i]==-1)[0]] == np.append(self.z[i], self.z[i].max())[np.where(self.z[i]==-1)[0]+1]
+            print(self.z[i])
+            self.z[i][np.where(self.z[i]==-1)[0]] = torch.tensor(np.append(self.z[i], self.z[i].max())[np.where(self.z[i]==-1)[0]+1])
+            print(self.z[i])
 
     def __getitem__(self, index):
         return self.x[index], self.y[index], self.z[index]
