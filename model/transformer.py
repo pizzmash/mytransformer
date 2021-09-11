@@ -72,7 +72,7 @@ class MyTransformer(nn.Module):
   def __init__(self, d_model: int = 768, nhead: int = 12, num_encoder_layers: int = 12,
                num_decoder_layers: int = 12, dim_feedforward: int = 3072, dropout: float = 0.1,
                activation: str = "relu", source_vocab_length: int = 32000, target_vocab_length: int = 32000,
-               add_to_dec: bool = False) -> None:
+               add_to_dec: bool = False, yamamoto: bool = False) -> None:
     super(MyTransformer, self).__init__()
     self.source_embedding = nn.Embedding(source_vocab_length, d_model)
     self.pos_encoder = PositionalEncoding(d_model)
@@ -89,6 +89,7 @@ class MyTransformer(nn.Module):
     self.d_model = d_model
     self.nhead = nhead
     self.add_to_dec = add_to_dec
+    self.yamamoto = yamamoto
 
   def forward(self, src: Tensor, importance: Tensor, tgt: Tensor, src_mask: Optional[Tensor] = None, tgt_mask: Optional[Tensor] = None,
           memory_mask: Optional[Tensor] = None, src_key_padding_mask: Optional[Tensor] = None,
@@ -104,6 +105,8 @@ class MyTransformer(nn.Module):
         memory += self.importance_embedding(importance)
     tgt = self.target_embedding(tgt)
     tgt = self.pos_encoder(tgt)
+    if self.yamamoto:
+        tgt += self.importance_embedding(torch.ones_like(tgt.size()[0], tgt.size()[1]))
     output = self.decoder(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
                           tgt_key_padding_mask=tgt_key_padding_mask,
                           memory_key_padding_mask=memory_key_padding_mask)
