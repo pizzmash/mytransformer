@@ -28,7 +28,7 @@ def load_ds_and_build_dl(args):
             args.max_dec_steps
         )
     elif args.method == 'proposed' or args.method == 'attention':
-        bin_imp = args.method == 'proposed'
+        bin_imp = args.method == 'proposed' and not args.weighted_average
         train_ds = MyDataset(
             args.enc_sp_model,
             args.dec_sp_model,
@@ -75,6 +75,7 @@ def build_model(args, source_vocab_length, target_vocab_length):
         model = MyTransformer(
             add_to_dec=args.add_to_dec,
             yamamoto=args.yamamoto,
+            weighted=args.weighted_average,
             d_model=args.d_model,
             nhead=args.nhead,
             num_encoder_layers=args.num_encoder_layers,
@@ -351,7 +352,7 @@ def test(args):
         )
         zip_obj = zip(test_ds.x, test_ds.y)
     elif args.method == 'proposed' or args.method == 'attention':
-        bin_imp = args.method == 'proposed'
+        bin_imp = args.method == 'proposed' and not args.weighted_average
         test_ds = MyDataset(
             args.enc_sp_model,
             args.dec_sp_model,
@@ -497,6 +498,7 @@ def main():
     parser.add_argument('--log-dir', required=conds[0])
     parser.add_argument('--decode-dir', required=conds[1])
     parser.add_argument('--need-weights', action='store_true')
+    parser.add_argument('--weighted-average', action='store_true')
 
     args = parser.parse_args()
 
