@@ -35,7 +35,8 @@ def load_ds_and_build_dl(args):
             args.train_data,
             args.max_enc_steps,
             args.max_dec_steps,
-            bin_imp
+            bin_imp,
+            args.segment
         )
         valid_ds = MyDataset(
             args.enc_sp_model,
@@ -43,7 +44,8 @@ def load_ds_and_build_dl(args):
             args.valid_data,
             args.max_enc_steps,
             args.max_dec_steps,
-            bin_imp
+            bin_imp,
+            args.segment
         )
     train_dl = DataLoader(
         train_ds,
@@ -358,7 +360,8 @@ def test(args):
             args.test_data,
             args.max_enc_steps,
             args.max_dec_steps,
-            bin_imp
+            bin_imp,
+            args.segment
         )
         zip_obj = zip(test_ds.x, test_ds.y, test_ds.z)
 
@@ -497,6 +500,7 @@ def main():
     parser.add_argument('--log-dir', required=conds[0])
     parser.add_argument('--decode-dir', required=conds[1])
     parser.add_argument('--need-weights', action='store_true')
+    parser.add_argument('--segment', action='store_true')
 
     args = parser.parse_args()
 
