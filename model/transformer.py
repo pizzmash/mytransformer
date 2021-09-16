@@ -107,9 +107,7 @@ class MyTransformer(nn.Module):
             one_imp = self.importance_embedding(torch.ones_like(importance))
             max_value, _ = importance.max(axis=0)
             if 0 in max_value:
-                print(importance)
-                print(max_value)
-                exit()
+                max_value[torch.where(max_value==0)[0]] = 1. 
             imp_weight = importance.type(torch.float32) / max_value
             imp_weight = imp_weight.view(imp_weight.size()[0], imp_weight.size()[1], 1)
             src += zero_imp * imp_weight + one_imp * (1. - imp_weight)
@@ -119,7 +117,9 @@ class MyTransformer(nn.Module):
     tgt = self.target_embedding(tgt)
     tgt = self.pos_encoder(tgt)
     if self.yamamoto:
-        tgt += self.importance_embedding(torch.ones_like(tgt.size()[0], tgt.size()[1]))
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        ones_tensor = torch.ones(tgt.size()[0], tgt.size()[1]).to(device).long()
+        tgt += self.importance_embedding(ones_tensor)
     output = self.decoder(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
                           tgt_key_padding_mask=tgt_key_padding_mask,
                           memory_key_padding_mask=memory_key_padding_mask)
