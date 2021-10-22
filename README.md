@@ -39,6 +39,7 @@ $ python main.py ...
 | `--enc-sp-model`           | 入力系列のsentencepieceモデルパス                                              |            | ○                                                       |
 | `--dec-sp-model`           | 出力系列のsentencepieceモデルパス                                              |            | ○                                                       |
 | `--train-data`             | 学習データのpickleファイルパス                                                 |            | `--mode`で`train`指定時に必須                            |
+| `--imp-thres` | 上位何文を重要と指定するか | `--method`が`proposed`のときのみ | 3 |
 | `--valid-data`             | 検証データのpickleファイルパス                                                 |            | `--mode`で`train`指定時に必須                            |
 | `--test-data`              | テストデータのpickleファイルパス                                               |            | `--mode`で`test`指定時に必須                             |
 | `--model-load`             | 学習済みモデルパラメータを読み込む際のモデルパス                               |            | `--mode`で`test`指定時，`--optim-load`指定時，または`--tune`指定時に必須 |
