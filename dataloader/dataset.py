@@ -31,7 +31,7 @@ class SentencePieceDataset(Dataset):
 
 
 class MyDataset(Dataset):
-    def __init__(self, xmodel_path, ymodel_path, data_path, max_xlen, max_ylen, bin_imp=True, thres=3):
+    def __init__(self, xmodel_path, ymodel_path, data_path, max_xlen, max_ylen, focus_lead_n=None, bin_imp=True, thres=3):
         self.spx = spm.SentencePieceProcessor()
         self.spx.load(xmodel_path)
         self.spy = spm.SentencePieceProcessor()
@@ -40,21 +40,35 @@ class MyDataset(Dataset):
             data = pickle.load(f)
         self.x = [torch.tensor(d[0][:max_xlen]) for d in data if len(d[0]) > 0]
         self.y = [torch.tensor(d[1][:max_ylen]) for d in data if len(d[0]) > 0]
-        if bin_imp:
-          # 各データの単語対応位置の文の重要度ランク
-          ranks_list = [d[2][:max_xlen] for d in data if len(d[0]) > 0]
-          # 各データの文の数
-          n_sentences_list = [max(ranks) + 1 for ranks in ranks_list]
-          # 各データに対して何番目のランクの文まで重要とするか
-          ths = [thres if n_sentences > thres else n_sentences  for n_sentences in n_sentences_list]
-          # 各データの単語対応位置の文が重要かどうか
-          self.z = [torch.tensor([1 if 0 <= rank <= th else 0 for rank in ranks])
-                    for ranks, n_sentences, th in zip(ranks_list, n_sentences_list, ths)]
+        if focus_lead_n is None:
+          if bin_imp:
+            # 各データの単語対応位置の文の重要度ランク
+            ranks_list = [d[2][:max_xlen] for d in data if len(d[0]) > 0]
+            # 各データの文の数
+            n_sentences_list = [max(ranks) + 1 for ranks in ranks_list]
+            # 各データに対して何番目のランクの文まで重要とするか
+            ths = [thres if n_sentences > thres else n_sentences  for n_sentences in n_sentences_list]
+            # 各データの単語対応位置の文が重要かどうか
+            self.z = [torch.tensor([1 if 0 <= rank <= th else 0 for rank in ranks])
+                      for ranks, n_sentences, th in zip(ranks_list, n_sentences_list, ths)]
+          else:
+            self.z = [torch.tensor(d[2][:max_xlen]) for d in data if len(d[0]) > 0]
+            # 文間の-1を次の文の値にする
+            for i in range(len(self.z)):
+              self.z[i][np.where(self.z[i]==-1)[0]] = torch.tensor(np.append(self.z[i], self.z[i].max())[np.where(self.z[i]==-1)[0]+1])
         else:
-          self.z = [torch.tensor(d[2][:max_xlen]) for d in data if len(d[0]) > 0]
-          # 文間の-1を次の文の値にする
-          for i in range(len(self.z)):
-            self.z[i][np.where(self.z[i]==-1)[0]] = torch.tensor(np.append(self.z[i], self.z[i].max())[np.where(self.z[i]==-1)[0]+1])
+          self.z = []
+          for tokens in self.x:
+            imps = []
+            imp = 1 if focus_lead_n > 0 else 0
+            sep_count = 0
+            for token in tokens:
+              imps.append(imp)
+              if token == self.spx['<sep>']:
+                sep_count += 1
+                if sep_count >= focus_lead_n:
+                  imp = 0
+            self.z.append(torch.tensor(imps))
 
     def __getitem__(self, index):
         return self.x[index], self.y[index], self.z[index]
