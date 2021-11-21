@@ -48,7 +48,7 @@ class MyDataset(Dataset):
           # 各データに対して何番目のランクの文まで重要とするか
           ths = [thres if n_sentences > thres else n_sentences  for n_sentences in n_sentences_list]
           # 各データの単語対応位置の文が重要かどうか
-          self.z = [torch.tensor([1 if 0 <= rank <= th else 0 for rank in ranks])
+          self.z = [torch.tensor([1 if 0 <= rank < th else 0 for rank in ranks])
                     for ranks, n_sentences, th in zip(ranks_list, n_sentences_list, ths)]
         else:
           self.z = [torch.tensor(d[2][:max_xlen]) for d in data if len(d[0]) > 0]
