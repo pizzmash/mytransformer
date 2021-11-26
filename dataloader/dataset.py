@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 from torch.nn.utils import rnn
 import numpy as np
+import math
 
 class SentencePieceDataset(Dataset):
     def __init__(self, xmodel_path, ymodel_path, data_path, max_xlen, max_ylen):
@@ -31,7 +32,7 @@ class SentencePieceDataset(Dataset):
 
 
 class MyDataset(Dataset):
-    def __init__(self, xmodel_path, ymodel_path, data_path, max_xlen, max_ylen, bin_imp=True, thres=3):
+    def __init__(self, xmodel_path, ymodel_path, data_path, max_xlen, max_ylen, bin_imp=True, thres=3, per_thres=None):
         self.spx = spm.SentencePieceProcessor()
         self.spx.load(xmodel_path)
         self.spy = spm.SentencePieceProcessor()
@@ -46,7 +47,10 @@ class MyDataset(Dataset):
           # 各データの文の数
           n_sentences_list = [max(ranks) + 1 for ranks in ranks_list]
           # 各データに対して何番目のランクの文まで重要とするか
-          ths = [thres if n_sentences > thres else n_sentences  for n_sentences in n_sentences_list]
+          if per_thres is None:
+            ths = [thres if n_sentences > thres else n_sentences  for n_sentences in n_sentences_list]
+          else:
+            ths = [math.ceil(n_sentences * per_thres) if math.ceil(n_sentences * per_thres) <= 2 else 2  for n_sentences in n_sentences_list]
           # 各データの単語対応位置の文が重要かどうか
           self.z = [torch.tensor([1 if 0 <= rank < th else 0 for rank in ranks])
                     for ranks, n_sentences, th in zip(ranks_list, n_sentences_list, ths)]

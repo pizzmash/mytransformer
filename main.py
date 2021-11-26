@@ -36,7 +36,8 @@ def load_ds_and_build_dl(args):
             args.max_enc_steps,
             args.max_dec_steps,
             bin_imp,
-            thres=args.imp_thres
+            thres=args.imp_thres,
+            per_thres=args.per_thres
         )
         valid_ds = MyDataset(
             args.enc_sp_model,
@@ -45,7 +46,8 @@ def load_ds_and_build_dl(args):
             args.max_enc_steps,
             args.max_dec_steps,
             bin_imp,
-            thres=args.imp_thres
+            thres=args.imp_thres,
+            per_thres=args.per_thres
         )
     train_dl = DataLoader(
         train_ds,
@@ -362,7 +364,8 @@ def test(args):
             args.max_enc_steps,
             args.max_dec_steps,
             bin_imp,
-            args.imp_thres
+            args.imp_thres,
+            per_thres=args.per_thres
         )
         zip_obj = zip(test_ds.x, test_ds.y, test_ds.z)
 
@@ -503,6 +506,7 @@ def main():
     parser.add_argument('--need-weights', action='store_true')
     parser.add_argument('--weighted-average', action='store_true')
     parser.add_argument('--imp-thres', type=int, default=3, help='importance threshold')
+    parser.add_argument('--per-thres', type=float)
 
     args = parser.parse_args()
 
