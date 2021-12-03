@@ -289,9 +289,17 @@ def train(args):
 
             if phase == 'train':
                 optim.step()
+                if args.save_all_model:
+                    print('saving state dict. [epoch {}]'.format(epoch))
+                    dirname = os.path.dirname(args.model_save)
+                    if not os.path.exists(dirname):
+                        os.mkdir(os.path.dirname(args.model_save))
+                    model_path = os.path.join(dirname, "epoch_{}.pt".format(epoch))
+                    torch.save(model.state_dict(), model_path)
+
             elif phase == 'val':
                 if epoch_loss < min_epoch_loss:
-                    print('saving state dict. [epoch {}]'.format(epoch))
+                    print('updated minimum loss. [epoch {}]'.format(epoch))
                     if not os.path.exists(os.path.dirname(args.model_save)):
                         os.mkdir(os.path.dirname(args.model_save))
                     torch.save(model.state_dict(), args.model_save)
@@ -470,6 +478,7 @@ def main():
         required='--early-stopping' in sys.argv,
         help='number of non-updated times before stopping'
     )
+    parser.add_argument('--save-all-model', action='store_true')
     parser.add_argument('--d-model', type=int, default=512)
     parser.add_argument('--nhead', type=int, default=8)
     parser.add_argument('--num-encoder-layers', type=int, default=6)
