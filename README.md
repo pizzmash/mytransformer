@@ -22,7 +22,6 @@ $ python main.py ...
 | `--method`                 | 普通のtransformerか提案モデルか．`conventional` or `proposed` or `attention`                   |            | ○                                                       |
 |`--yamamoto`|指定した場合，`--method`が`proposed`時にDecoderの入力に対しても文が重要であることを表す分散表現を加算する|||
 | `--tune`   | 指定した場合，`--method`が`proposed` or `attention`時に，学習済みの`conventional`モデルを読み込んで追加された機構のみfine tuningする  |   |   |
-| `--add-to-dec` | 指定した場合，`--method`が`proposed`時に，重要性を表すembeddingをencoderではなくdecoderに加算する | | |
 | `--epochs`                 | 学習エポック数                                                                 |            | ○                                                       |
 | `--start-epoch`            | 開始エポック                                                                   | 0          |                                                          |
 | `--batch-size`             | バッチサイズ                                                                   |            | ○                                                       |
