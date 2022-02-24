@@ -20,6 +20,7 @@ $ python main.py ...
 | -------------------------- | ------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------- |
 | `--mode`                   | 学習かテストか．`train` or `test`                                              |            | ○                                                       |
 | `--method`                 | 普通のtransformerか提案モデルか．`conventional` or `proposed` or `attention`                   |            | ○                                                       |
+|`--yamamoto`|指定した場合，`--method`が`proposed`時にDecoderの入力に対しても文が重要であることを表す分散表現を加算する|||
 | `--tune`   | 指定した場合，`--method`が`proposed` or `attention`時に，学習済みの`conventional`モデルを読み込んで追加された機構のみfine tuningする  |   |   |
 | `--add-to-dec` | 指定した場合，`--method`が`proposed`時に，重要性を表すembeddingをencoderではなくdecoderに加算する | | |
 | `--epochs`                 | 学習エポック数                                                                 |            | ○                                                       |
@@ -86,6 +87,6 @@ srcの対応するポジションの文が，srcの全て文の中で何番目�
 ```
 となっており，2文目，3文目，1文目の順に重要であるとする場合，importanceは
 ```
-[-1, 2, 2, -1, 0, 0, -1, 1, 1]
+[2, 2, 2, 0, 0, 0, 1, 1, 1]
 ```
 となるようにする．`--method`が`conventional`の場合importanceは不要．
